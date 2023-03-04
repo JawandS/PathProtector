@@ -9,10 +9,10 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
 
 import java.math.BigDecimal;
-import java.util.Dictionary;
 
 public class MainActivity extends Activity implements GPSCallback {
     private GPSManager gpsManager = null;
@@ -23,14 +23,19 @@ public class MainActivity extends Activity implements GPSCallback {
     TextView currentSpeedTxt;
     TextView maxSpeedTxt;
     TextView statusTxt;
-    double drivingThreshold = 5.0;
+    double drivingThreshold = 2.7;
     double movingThreshold = 0.3;
+    double firstTs = 0;
+    double timestamp;
+    int timestampCounter = 0;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         // set up
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        firstTs = System.currentTimeMillis();
 
         // get views
         currentSpeedTxt = (TextView) findViewById(R.id.currentSpeed);
@@ -70,6 +75,9 @@ public class MainActivity extends Activity implements GPSCallback {
         currentSpeed = round(currentSpeed, 3, BigDecimal.ROUND_HALF_UP);
         currentSpeedTxt.setText("Current speed: " + currentSpeed + " m/s");
 
+        timestamp = System.currentTimeMillis();
+        timestampCounter += 1;
+
         if (currentSpeed > maxSpeed) { // update maximum speed
             maxSpeed = currentSpeed;
             maxSpeedTxt.setText("Max speed: " + currentSpeed + " m/s");
@@ -83,6 +91,12 @@ public class MainActivity extends Activity implements GPSCallback {
         } else { // still
             statusTxt.setText("Status: Still");
         }
+
+        /*statusTxt.setText("Update frequency: " + String.valueOf(round((timestamp - firstTs) / 1000 / timestampCounter, 3, BigDecimal.ROUND_HALF_UP)));
+        final String TAG = "important info";
+        Log.v(TAG, "Critical: " + (timestamp - firstTs));
+        Log.v(TAG, "Critical: " + timestampCounter);
+        Log.v(TAG, "Critical: " + (timestamp - firstTs) / 1000 / timestampCounter); */
     }
 
     @Override
