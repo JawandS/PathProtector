@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.widget.TextView;
 
 import java.math.BigDecimal;
+import java.util.Dictionary;
 
 public class MainActivity extends Activity implements GPSCallback {
     private GPSManager gpsManager = null;
@@ -22,6 +23,8 @@ public class MainActivity extends Activity implements GPSCallback {
     TextView currentSpeedTxt;
     TextView maxSpeedTxt;
     TextView statusTxt;
+    double drivingThreshold = 5.0;
+    double movingThreshold = 0.3;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -73,9 +76,9 @@ public class MainActivity extends Activity implements GPSCallback {
         }
 
         // updates status
-        if (currentSpeed > 8) { // car
+        if (currentSpeed > drivingThreshold) { // car
             statusTxt.setText("Status: Driving");
-        } else if (currentSpeed > 0.33) { // walking
+        } else if (currentSpeed > movingThreshold) { // walking
             statusTxt.setText("Status: Moving");
         } else { // still
             statusTxt.setText("Status: Still");
