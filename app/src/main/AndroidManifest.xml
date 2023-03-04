@@ -15,6 +15,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PathProtector">
         <activity
+            android:name=".MainApp"
+            android:exported="false"
+            android:label="@string/title_activity_main_app" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
