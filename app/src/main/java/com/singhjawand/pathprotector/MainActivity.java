@@ -20,14 +20,24 @@ public class MainActivity extends Activity implements GPSCallback {
     LocationManager locationManager;
     double currentSpeed = 0.0;
     double maxSpeed = 0.0;
+
+    // text views
     TextView currentSpeedTxt;
     TextView maxSpeedTxt;
     TextView statusTxt;
-    double drivingThreshold = 2.7;
+    TextView otherInfoTxt;
+
+    double drivingThreshold = 0.4; // default is 2.7 m/s
     double movingThreshold = 0.3;
     double firstTs = 0;
     double timestamp;
     int timestampCounter = 0;
+    double lastPause = 0;
+
+    // driving information
+    boolean isDriving = false;
+    double maxWaitTime = 5 * 1000; // default is 4 minutes --> milliseconds
+    double minDrivetime = 1 * 1000; // default is 1 minute --> milliseconds
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -41,6 +51,7 @@ public class MainActivity extends Activity implements GPSCallback {
         currentSpeedTxt = (TextView) findViewById(R.id.currentSpeed);
         maxSpeedTxt = (TextView) findViewById(R.id.maxSpeed);
         statusTxt = (TextView) findViewById(R.id.status);
+        otherInfoTxt = (TextView) findViewById(R.id.otherInfo);
 
         // access resources
         try {
@@ -72,11 +83,8 @@ public class MainActivity extends Activity implements GPSCallback {
     @Override
     public void onGPSUpdate(Location location) {
         currentSpeed = location.getSpeed();
-        currentSpeed = round(currentSpeed, 3, BigDecimal.ROUND_HALF_UP);
+        currentSpeed = round(currentSpeed, 3);
         currentSpeedTxt.setText("Current speed: " + currentSpeed + " m/s");
-
-        timestamp = System.currentTimeMillis();
-        timestampCounter += 1;
 
         if (currentSpeed > maxSpeed) { // update maximum speed
             maxSpeed = currentSpeed;
@@ -85,18 +93,26 @@ public class MainActivity extends Activity implements GPSCallback {
 
         // updates status
         if (currentSpeed > drivingThreshold) { // car
+            timestamp = System.currentTimeMillis();
+            timestampCounter += 1;
             statusTxt.setText("Status: Driving");
-        } else if (currentSpeed > movingThreshold) { // walking
-            statusTxt.setText("Status: Moving");
-        } else { // still
+            if (!isDriving) { // began driving
+                firstTs = timestamp;
+                isDriving = true;
+            }
+        } else if (isDriving && timestamp - lastPause > maxWaitTime) { // done driving
+            isDriving = false;
+            if (timestamp - firstTs > minDrivetime) // check drive is long enough
+                promptUser(); // ask the user whether to store drive
+        } else {
             statusTxt.setText("Status: Still");
         }
+    }
 
-        /*statusTxt.setText("Update frequency: " + String.valueOf(round((timestamp - firstTs) / 1000 / timestampCounter, 3, BigDecimal.ROUND_HALF_UP)));
-        final String TAG = "important info";
-        Log.v(TAG, "Critical: " + (timestamp - firstTs));
-        Log.v(TAG, "Critical: " + timestampCounter);
-        Log.v(TAG, "Critical: " + (timestamp - firstTs) / 1000 / timestampCounter); */
+    void promptUser() {
+        Log.v("ImportantInfo", "Saving data");
+        // length of trip
+        otherInfoTxt.setText(String.valueOf(round((timestamp - firstTs) / 1000, 3)));
     }
 
     @Override
@@ -107,9 +123,16 @@ public class MainActivity extends Activity implements GPSCallback {
         super.onDestroy();
     }
 
-    public static double round(double unrounded, int precision, int roundingMode) {
+    public static double round(double unrounded, int precision) {
+        int roundingMode = BigDecimal.ROUND_HALF_UP;
         BigDecimal bd = new BigDecimal(unrounded);
         BigDecimal rounded = bd.setScale(precision, roundingMode);
         return rounded.doubleValue();
     }
 }
+
+/*statusTxt.setText("Update frequency: " + String.valueOf(round((timestamp - firstTs) / 1000 / timestampCounter, 3, BigDecimal.ROUND_HALF_UP)));
+        final String TAG = "important info";
+        Log.v(TAG, "Critical: " + (timestamp - firstTs));
+        Log.v(TAG, "Critical: " + timestampCounter);
+        Log.v(TAG, "Critical: " + (timestamp - firstTs) / 1000 / timestampCounter); */
