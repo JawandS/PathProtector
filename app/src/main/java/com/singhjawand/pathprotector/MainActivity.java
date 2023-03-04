@@ -28,7 +28,7 @@ public class MainActivity extends Activity implements GPSCallback {
     TextView otherInfoTxt;
 
     double drivingThreshold = 0.4; // default is 2.7 m/s
-    double movingThreshold = 0.3;
+    //    double movingThreshold = 0.3;
     double firstTs = 0;
     double timestamp;
     int timestampCounter = 0;
@@ -37,7 +37,7 @@ public class MainActivity extends Activity implements GPSCallback {
     // driving information
     boolean isDriving = false;
     double maxWaitTime = 5 * 1000; // default is 4 minutes --> milliseconds
-    double minDrivetime = 1 * 1000; // default is 1 minute --> milliseconds
+    double minDriveTime = 1000; // default is 1 minute --> milliseconds
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -48,10 +48,10 @@ public class MainActivity extends Activity implements GPSCallback {
         firstTs = System.currentTimeMillis();
 
         // get views
-        currentSpeedTxt = (TextView) findViewById(R.id.currentSpeed);
-        maxSpeedTxt = (TextView) findViewById(R.id.maxSpeed);
-        statusTxt = (TextView) findViewById(R.id.status);
-        otherInfoTxt = (TextView) findViewById(R.id.otherInfo);
+        currentSpeedTxt = findViewById(R.id.currentSpeed);
+        maxSpeedTxt = findViewById(R.id.maxSpeed);
+        statusTxt = findViewById(R.id.status);
+        otherInfoTxt = findViewById(R.id.otherInfo);
 
         // access resources
         try {
@@ -102,7 +102,7 @@ public class MainActivity extends Activity implements GPSCallback {
             }
         } else if (isDriving && timestamp - lastPause > maxWaitTime) { // done driving
             isDriving = false;
-            if (timestamp - firstTs > minDrivetime) // check drive is long enough
+            if (timestamp - firstTs > minDriveTime) // check drive is long enough
                 promptUser(); // ask the user whether to store drive
         } else {
             statusTxt.setText("Status: Still");
