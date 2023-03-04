@@ -1,63 +1,98 @@
 package com.singhjawand.pathprotector;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
+import android.app.Activity;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
-import android.view.LayoutInflater;
-import android.widget.EditText;
 import android.widget.TextView;
 
-public class MainActivity extends AppCompatActivity {
-    TextView mainText;
-    SensorManager sensorManager;
-    Sensor sensor; // general sensor
-    Sensor accelerometer;
-    double ax, ay, az;   // acceleration in x, y, z
+import java.math.BigDecimal;
+
+public class MainActivity extends Activity implements GPSCallback {
+    private GPSManager gpsManager = null;
+    Boolean isGPSEnabled = false;
+    LocationManager locationManager;
+    double currentSpeed = 0.0;
+    double maxSpeed = 0.0;
+    TextView currentSpeedTxt;
+    TextView maxSpeedTxt;
+    TextView statusTxt;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
+        // set up
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mainText = (TextView) findViewById(R.id.sampleText);
-        mainText.setText("got it!");
 
-        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        if (sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
-            // success! we have an accelerometer
-            mainText.setText("have accel");
-            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL * 100);
+        // get views
+        currentSpeedTxt = (TextView) findViewById(R.id.currentSpeed);
+        maxSpeedTxt = (TextView) findViewById(R.id.maxSpeed);
+        statusTxt = (TextView) findViewById(R.id.status);
+
+        // access resources
+        try {
+            if (ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 101);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // start tracking speed
+        getCurrentSpeed();
+    }
+
+    public void getCurrentSpeed() {
+        currentSpeedTxt.setText(getString(R.string.info));
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        gpsManager = new GPSManager(MainActivity.this);
+        isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        if (isGPSEnabled) {
+            gpsManager.startListening(getApplicationContext());
+            gpsManager.setGPSCallback(this);
         } else {
-            // fail! we dont have an accelerometer!
-            mainText.setText("no accel :(");
+            gpsManager.showSettingsAlert();
         }
     }
 
-    private final SensorEventListener listener = new SensorEventListener() {
-        @SuppressLint("SetTextI18n")
-        @Override
-        public void onSensorChanged(SensorEvent event) {
-            // The acceleration may be negative, so take their absolute value
-            float xValue = Math.abs(event.values[0]);
-            float yValue = Math.abs(event.values[1]);
-            float zValue = Math.abs(event.values[2]);
-            mainText.setText(xValue + " " + yValue + " " + zValue);
-            if (xValue > 10 || yValue > 10 || zValue > 10) {
-                // message for user
-                mainText.setText(xValue + " " + yValue + " " + zValue);
-            }
+    @SuppressLint("SetTextI18n")
+    @Override
+    public void onGPSUpdate(Location location) {
+        currentSpeed = location.getSpeed();
+        currentSpeed = round(currentSpeed, 3, BigDecimal.ROUND_HALF_UP);
+        currentSpeedTxt.setText("Current speed: " + currentSpeed + " m/s");
+
+        if (currentSpeed > maxSpeed) { // update maximum speed
+            maxSpeed = currentSpeed;
+            maxSpeedTxt.setText("Max speed: " + currentSpeed + " m/s");
         }
 
-        @Override
-        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // updates status
+        if (currentSpeed > 8) { // car
+            statusTxt.setText("Status: Driving");
+        } else if (currentSpeed > 0.33) { // walking
+            statusTxt.setText("Status: Moving");
+        } else { // still
+            statusTxt.setText("Status: Still");
         }
-    };
+    }
+
+    @Override
+    protected void onDestroy() {
+        gpsManager.stopListening();
+        gpsManager.setGPSCallback(null);
+        gpsManager = null;
+        super.onDestroy();
+    }
+
+    public static double round(double unrounded, int precision, int roundingMode) {
+        BigDecimal bd = new BigDecimal(unrounded);
+        BigDecimal rounded = bd.setScale(precision, roundingMode);
+        return rounded.doubleValue();
+    }
 }
